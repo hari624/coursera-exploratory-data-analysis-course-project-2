@@ -1,30 +1,26 @@
-## This first line will likely take a few seconds. Be patient!
 if(!exists("NEI")){
-  NEI <- readRDS("./data/summarySCC_PM25.rds")
+  NEI <- readRDS("./summarySCC_PM25.rds")
 }
 if(!exists("SCC")){
-  SCC <- readRDS("./data/Source_Classification_Code.rds")
+  SCC <- readRDS("./Source_Classification_Code.rds")
 }
+# Subset coal combustion related NEI data
+combustionRelated <- grepl("comb", SCC$SCC.Level.One, ignore.case=TRUE)
+coalRelated <- grepl("coal", SCC$SCC.Level.Four, ignore.case=TRUE) 
+coalCombustion <- (combustionRelated & coalRelated)
+combustionSCC <- SCC[coalCombustion,]$SCC
+combustionNEI <- NEI[NEI$SCC %in% combustionSCC,]
+
+png("plot4.png",width=480,height=480,units="px",bg="transparent")
 
 library(ggplot2)
 
-# Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, 
-# which of these four sources have seen decreases in emissions from 1999 2008 for Baltimore City? 
-# Which have seen increases in emissions from 1999 2008? 
-# Use the ggplot2 plotting system to make a plot answer this question.
+ggp <- ggplot(combustionNEI,aes(factor(year),Emissions/10^5)) +
+  geom_bar(stat="identity",fill="grey",width=0.75) +
+  theme_bw() +  guides(fill=FALSE) +
+  labs(x="year", y=expression("Total PM"[2.5]*" Emission (10^5 Tons)")) + 
+  labs(title=expression("PM"[2.5]*" Coal Combustion Source Emissions Across US from 1999-2008"))
 
-# 24510 is Baltimore, see plot2.R
-subsetNEI  <- NEI[NEI$fips=="24510", ]
+print(ggp)
 
-aggregatedTotalByYearAndType <- aggregate(Emissions ~ year + type, subsetNEI, sum)
-
-
-
-png("plot3.png", width=640, height=480)
-g <- ggplot(aggregatedTotalByYearAndType, aes(year, Emissions, color = type))
-g <- g + geom_line() +
-  xlab("year") +
-  ylab(expression('Total PM'[2.5]*" Emissions")) +
-  ggtitle('Total Emissions in Baltimore City, Maryland (fips == "24510") from 1999 to 2008')
-print(g)
 dev.off()
